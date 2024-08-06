@@ -1,0 +1,55 @@
+server:
+  port: 8765
+
+spring:
+  application:
+    name: api-gateway
+  config:
+     import: optional:configserver:http://localhost:8888
+  cloud:
+    gateway:
+      routes:
+        - id: get_route
+          uri: http://httpbin.org:80
+          predicates:
+            - Path=/get
+          filters:
+            - AddRequestHeader=MyHeader, MyURI
+            - AddRequestParameter=Param, MyValue
+        - id: currency_exchange_route
+          uri: lb://currency-exchange
+          predicates:
+            - Path=/currency-exchange/**
+        - id: currency_conversion_route
+          uri: lb://currency-conversion
+          predicates:
+            - Path=/currency-conversion/**
+        - id: currency_conversion_feign_route
+          uri: lb://currency-conversion
+          predicates:
+            - Path=/currency-conversion-feign/**
+        - id: currency_conversion_new_route
+          uri: lb://currency-conversion
+          predicates:
+            - Path=/currency-conversion-new/**
+          filters:
+            - RewritePath=/currency-conversion-new/(?<segment>.*), /currency-conversion-feign/${segment}
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka
+
+#spring.cloud.gateway.discovery.locator.enabled=true
+#spring.cloud.gateway.discovery.locator.lowerCaseServiceId=true
+
+#spring.sleuth.sampler.probability=1.0
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+
+logging:
+  pattern:
+    level: '%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]'
+
